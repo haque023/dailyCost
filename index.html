@@ -1,0 +1,134 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Cost Entry Form</title>
+    <style>
+        table, th, td {
+            border: 1px solid black;
+            border-collapse: collapse;
+            padding: 8px;
+        }
+        th, td {
+            text-align: left;
+        }
+        input {
+            margin-bottom: 10px;
+        }
+    </style>
+</head>
+<body>
+
+    <h2>Enter Cost Details</h2>
+
+    <label for="costType">Cost Type:</label><br>
+    <select id="costType" name="costType">
+        <option value="increment">Increment</option>
+        <option value="decrement">Decrement</option>
+    </select><br>
+
+    <label for="remarks">Remarks:</label><br>
+    <input type="text" id="remarks" name="remarks"><br>
+
+    <label for="amount">Amount:</label><br>
+    <input type="number" id="amount" name="amount"><br><br>
+
+    <button onclick="addToTable()">Add to Table</button>
+
+    <h3>Cost Records</h3>
+
+    <table id="costTable">
+        <thead>
+            <tr>
+                <th>Sl</th>
+                <th>Cost Type</th>
+                <th>Remarks</th>
+                <th>Amount</th>
+            </tr>
+        </thead>
+        <tbody>
+        </tbody>
+    </table>
+
+    <script>
+        let serialNumber = 1;
+        let costData = [];
+
+        window.onload = async function() {
+            const response = await fetch('https://raw.githubusercontent.com/haque023/dailyCost/main/data.json');
+            const data = await response.json();
+            costData = data;
+            data.forEach(entry => {
+                addRowToTable(entry.costType, entry.remarks, entry.amount);
+            });
+        };
+
+        function addToTable() {
+            const costType = document.getElementById("costType").value;
+            const remarks = document.getElementById("remarks").value;
+            const amount = document.getElementById("amount").value;
+
+            if(costType && remarks && amount) {
+                addRowToTable(costType, remarks, amount);
+
+                const newEntry = {
+                    costType: costType,
+                    remarks: remarks,
+                    amount: amount
+                };
+                costData.push(newEntry);
+
+                updateJsonFile(costData);
+
+                document.getElementById("remarks").value = '';
+                document.getElementById("amount").value = '';
+            } else {
+                alert("Please fill all fields before adding!");
+            }
+        }
+
+        function addRowToTable(costType, remarks, amount) {
+            const table = document.getElementById("costTable").getElementsByTagName("tbody")[0];
+            const newRow = table.insertRow();
+            const slCell = newRow.insertCell(0);
+            const costTypeCell = newRow.insertCell(1);
+            const remarksCell = newRow.insertCell(2);
+            const amountCell = newRow.insertCell(3);
+
+            slCell.innerHTML = serialNumber++;
+            costTypeCell.innerHTML = costType;
+            remarksCell.innerHTML = remarks;
+            amountCell.innerHTML = amount;
+        }
+
+        async function updateJsonFile(data) {
+            const token = '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';
+
+            const response = await fetch('https://api.github.com/repos/haque023/dailyCost/contents/data.json', {
+                method: 'PUT',
+                headers: {
+                    'Authorization': `Bearer ${token}`,
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify({
+                    message: "Updated cost data",
+                    content: btoa(JSON.stringify(data, null, 2)),
+                    sha: await getFileSha()
+                })
+            });
+
+            if (!response.ok) {
+                alert("Error saving data!");
+            }
+        }
+
+        async function getFileSha() {
+            const response = await fetch('https://api.github.com/repos/haque023/dailyCost/contents/data.json');
+            const data = await response.json();
+            return data.sha;
+        }
+    </script>
+
+</body>
+</html>
